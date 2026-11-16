@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>단백질 단가 계산기 — 1g 단백질이 몇 원인지 바로 계산</title>
+<meta name="description" content="식품 가격과 중량, 단백질 함량만 넣으면 100g당 가격과 1g 단백질당 원가를 계산해 가장 싼 단백질 순으로 정렬해 줍니다. 하루 단백질 목표를 채우는 데 드는 비용도 바로 나옵니다.">
+<meta name="keywords" content="단백질 단가, 단백질 가격, 1g 단백질 원가, 고단백 식단, 장보기 단가, 닭가슴살 단가, 프로틴 가성비">
+<meta property="og:title" content="단백질 단가 계산기">
+<meta property="og:description" content="가격·중량·단백질 함량만 넣으면 1g 단백질당 원가를 계산해 가장 싼 순으로 정렬합니다.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --ink:#16232e; --ink-soft:#5b6b78; --line:#dfe6ec; --bg:#f5f7f9; --card:#fff;
+    --brand:#1f7a63; --brand-soft:#e7f4ef; --warn:#b3261e; --gold:#8a5a00;
+    --shadow:0 1px 2px rgba(16,35,46,.06), 0 8px 24px rgba(16,35,46,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--ink:#e9eef2;--ink-soft:#9fb0bd;--line:#2a3a46;--bg:#0f171d;--card:#16222b;
+          --brand:#5ed3b2;--brand-soft:#15332c;--shadow:0 1px 2px rgba(0,0,0,.4);}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+       line-height:1.55;-webkit-text-size-adjust:100%}
+  header{padding:28px 20px 18px;max-width:1040px;margin:0 auto}
+  h1{font-size:clamp(1.5rem,4vw,2rem);margin:0 0 8px;letter-spacing:-.02em}
+  .lede{margin:0;color:var(--ink-soft);font-size:.95rem;max-width:62ch}
+  main{max-width:1040px;margin:0 auto;padding:0 20px 64px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+  .card h2{font-size:1rem;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .card h2 .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;
+       background:var(--brand);color:#fff;font-size:.75rem;font-weight:700}
+  .grid{display:grid;grid-template-columns:1.4fr .7fr .7fr .7fr .7fr;gap:10px}
+  @media (max-width:720px){.grid{grid-template-columns:1fr 1fr}}
+  label{display:block;font-size:.75rem;font-weight:600;color:var(--ink-soft);margin-bottom:4px}
+  input[type=text],input[type=number]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;
+       background:var(--bg);color:var(--ink);font-size:.95rem;font-variant-numeric:tabular-nums}
+  input:focus{outline:2px solid var(--brand);outline-offset:1px}
+  .row-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  button{font:inherit;cursor:pointer;border-radius:9px;border:1px solid var(--line);background:var(--card);
+       color:var(--ink);padding:9px 14px;font-size:.9rem;transition:.12s}
+  button:hover{border-color:var(--brand)}
+  button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+  button.ghost{background:transparent;color:var(--ink-soft)}
+  button.tiny{padding:4px 8px;font-size:.78rem;border-radius:7px}
+  table{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:tabular-nums}
+  th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;white-space:normal}
+  thead th{font-size:.74rem;text-transform:none;color:var(--ink-soft);font-weight:700;cursor:pointer;user-select:none}
+  thead th:hover{color:var(--brand)}
+  tbody tr:hover{background:var(--brand-soft)}
+  .best{color:var(--brand);font-weight:800}
+  .worst{color:var(--warn)}
+  .muted{color:var(--ink-soft)}
+  .empty{padding:28px 10px;text-align:center;color:var(--ink-soft);font-size:.9rem}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .stat{background:var(--brand-soft);border-radius:11px;padding:12px 14px}
+  .stat .k{font-size:.74rem;color:var(--ink-soft);font-weight:600}
+  .stat .v{font-size:1.18rem;font-weight:800;letter-spacing:-.01em}
+  .stat .v small{font-size:.72rem;font-weight:600;color:var(--ink-soft)}
+  .target{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .target input{max-width:120px}
+  .tip{font-size:.8rem;color:var(--ink-soft);margin:10px 0 0}
+  footer{max-width:1040px;margin:0 auto;padding:0 20px 40px;color:var(--ink-soft);font-size:.8rem}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .adslot{border:1px dashed var(--line);border-radius:12px;padding:14px;text-align:center;
+       color:var(--ink-soft);font-size:.75rem;background:transparent}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:var(--bg);
+       padding:10px 16px;border-radius:10px;font-size:.85rem;opacity:0;pointer-events:none;transition:.2s;z-index:9}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .num-in{text-align:right}
+</style>
+</head>
+<body>
+<header>
+  <h1>단백질 단가 계산기</h1>
+  <p class="lede">가격·중량·단백질 함량만 넣으면 <strong>1g 단백질이 몇 원인지</strong> 계산해서 가장 싼 순서로 줄 세웁니다.
+     같은 단백질을 사도 재료에 따라 4배 이상 차이가 납니다. 장보기 전에 30초만 써 보세요.</p>
+</header>
+
+<main>
+  <!-- ① 입력 -->
+  <section class="card" aria-labelledby="add-title">
+    <h2 id="add-title"><span class="num">1</span> 식품 추가</h2>
+    <form id="add-form">
+      <div class="grid">
+        <div>
+          <label for="f-name">식품 이름</label>
+          <input id="f-name" type="text" placeholder="예: 닭가슴살 냉동 1kg" autocomplete="off" required>
+        </div>
+        <div>
+          <label for="f-price">가격 (원)</label>
+          <input id="f-price" class="num-in" type="number" inputmode="numeric" min="0" step="10" placeholder="9900" required>
+        </div>
+        <div>
+          <label for="f-weight">총 중량 (g)</label>
+          <input id="f-weight" class="num-in" type="number" inputmode="decimal" min="0" step="1" placeholder="1000" required>
+        </div>
+        <div>
+          <label for="f-protein">단백질 (g/100g)</label>
+          <input id="f-protein" class="num-in" type="number" inputmode="decimal" min="0" step="0.1" placeholder="23" required>
+        </div>
+        <div>
+          <label for="f-kcal">열량 (kcal/100g)</label>
+          <input id="f-kcal" class="num-in" type="number" inputmode="decimal" min="0" step="1" placeholder="110">
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="primary" type="submit">추가하기</button>
+        <button type="button" id="load-preset">예시 26종 불러오기</button>
+        <button type="button" class="ghost" id="clear-all">전체 지우기</button>
+        <button type="button" class="ghost" id="copy-csv">표 복사</button>
+      </div>
+      <p class="tip">단백질 함량은 제품 뒷면 영양정보의 “단백질 g / 100g”을 그대로 넣으면 됩니다. 열량은 비워도 계산됩니다.</p>
+    </form>
+  </section>
+
+  <div class="adslot" aria-hidden="true">광고 영역 (비워 둠 — 애드센스 승인 후 코드 삽입)</div>
+
+  <!-- ② 목표 -->
+  <section class="card" aria-labelledby="goal-title">
+    <h2 id="goal-title"><span class="num">2</span> 하루 목표</h2>
+    <div class="target">
+      <label for="f-target" style="margin:0">하루 단백질 목표</label>
+      <input id="f-target" class="num-in" type="number" min="10" max="400" step="5" value="140">
+      <span class="muted">g</span>
+    </div>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <!-- ③ 결과 -->
+  <section class="card" aria-labelledby="list-title">
+    <h2 id="list-title"><span class="num">3</span> 단가 순위</h2>
+    <div class="scroll">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th data-sort="name">식품</th>
+            <th data-sort="price">가격</th>
+            <th data-sort="weight">중량</th>
+            <th data-sort="costPer100g">100g당</th>
+            <th data-sort="costPerGProtein">1g 단백질당</th>
+            <th data-sort="proteinShare">단백질 열량비</th>
+            <th data-sort="costToTarget">목표 채우는 값</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty">아직 식품이 없습니다. 위에서 추가하거나 “예시 26종 불러오기”를 눌러 보세요.</div>
+    <p class="tip"><strong>1g 단백질당</strong>이 낮을수록 단백질을 싸게 사는 것입니다.
+       <strong>단백질 열량비</strong>는 그 식품 열량 중 단백질이 차지하는 비율로, 높을수록 단백질 위주 식품입니다(닭가슴살 약 84%, 우유 약 22%).</p>
+  </section>
+
+  <section class="card">
+    <h2>이렇게 쓰세요</h2>
+    <p class="tip" style="font-size:.9rem;line-height:1.7">
+      · 장보기 전에 이번 주에 살 것만 넣고 <strong>1g 단백질당</strong> 열을 비교하세요. 닭가슴살·계란·두부·그릭요거트·단백질 쉐이크가 보통 상위에 옵니다.<br>
+      · <strong>목표 채우는 값</strong>은 그 식품만으로 하루 목표를 채웠을 때 드는 돈입니다. 실제로는 여러 재료를 섞으니, 상위 3개를 섞는 기준으로 보면 됩니다.<br>
+      · 값은 브라우저에만 저장됩니다(localStorage). 서버로 아무것도 보내지 않습니다.
+    </p>
+  </section>
+</main>
+
+<footer>
+  <p>가격·영양 정보는 직접 입력하는 값이며, 제품 라벨과 실제 결제 금액을 기준으로 넣으세요. 계산 결과는 참고용입니다.</p>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* PURE_LOGIC_START */
+var PRESETS = [
+  {name:"닭가슴살 냉동 1kg", price:9900, weight:1000, protein:23, kcal:110},
+  {name:"닭다리살 1kg", price:8500, weight:1000, protein:18, kcal:180},
+  {name:"우민찌 다짐육 1kg", price:12900, weight:1000, protein:17, kcal:250},
+  {name:"한돈 뒷다리 다짐육 1kg", price:8900, weight:1000, protein:19, kcal:190},
+  {name:"연어 필렛 300g", price:12900, weight:300, protein:20, kcal:200},
+  {name:"참치캔 150g", price:1800, weight:150, protein:24, kcal:130},
+  {name:"계란 1판(30구)", price:7500, weight:1650, protein:12.6, kcal:143},
+  {name:"두부 400g", price:2200, weight:400, protein:8, kcal:88},
+  {name:"그릭요거트 450g", price:8900, weight:450, protein:9, kcal:60},
+  {name:"코티지치즈 200g", price:4500, weight:200, protein:12, kcal:90},
+  {name:"모짜렐라 치즈 500g", price:7900, weight:500, protein:22, kcal:280},
+  {name:"우유 1L", price:2800, weight:1000, protein:3.3, kcal:60},
+  {name:"단백질 쉐이크 500g", price:29900, weight:500, protein:70, kcal:380},
+  {name:"프로틴바 60g", price:2500, weight:60, protein:20, kcal:220},
+  {name:"즉석 현미밥 210g", price:1200, weight:210, protein:4, kcal:300},
+  {name:"귀리 1kg", price:4500, weight:1000, protein:13, kcal:380},
+  {name:"고구마 1kg", price:5900, weight:1000, protein:1.6, kcal:128},
+  {name:"또띠아 320g", price:3500, weight:320, protein:8, kcal:300},
+  {name:"샐러드믹스 150g", price:3000, weight:150, protein:1.5, kcal:20},
+  {name:"로메인 200g", price:2500, weight:200, protein:1.4, kcal:17},
+  {name:"미니 새송이버섯 200g", price:1980, weight:200, protein:2.6, kcal:30},
+  {name:"방울토마토 500g", price:4900, weight:500, protein:0.9, kcal:20},
+  {name:"바나나 1kg", price:3500, weight:1000, protein:1.1, kcal:89},
+  {name:"아몬드 400g", price:8900, weight:400, protein:21, kcal:580},
+  {name:"치폴레소스 300g", price:4500, weight:300, protein:1, kcal:100},
+  {name:"올리브오일 500g", price:9900, weight:500, protein:0, kcal:884}
+];
+
+function toNum(value) {
+  if (value === null || value === undefined || value === "") return NaN;
+  if (typeof value === "number") return value;
+  var cleaned = String(value).replace(/[,\s원₩g]/g, "");
+  var n = parseFloat(cleaned);
+  return isNaN(n) ? NaN : n;
+}
+
+/** 한 식품의 단가 지표를 계산한다. 계산 불가는 null. */
+function calcRow(item, targetG) {
+  var price = toNum(item.price);
+  var weight = toNum(item.weight);
+  var protein = toNum(item.protein);
+  var kcal = toNum(item.kcal);
+  var row = {
+    name: String(item.name || "").trim(),
+    price: price, weight: weight, protein: protein, kcal: kcal,
+    costPer100g: null, costPerGProtein: null, proteinShare: null,
+    costToTarget: null, gramsForTarget: null, kcalForTarget: null
+  };
+  if (!isFinite(price) || !isFinite(weight) || weight <= 0 || price < 0) return row;
+  row.costPer100g = price / weight * 100;
+  if (isFinite(protein) && protein > 0) {
+    row.costPerGProtein = price / (weight * protein / 100);
+    var goal = toNum(targetG);
+    if (isFinite(goal) && goal > 0) {
+      row.gramsForTarget = goal * 100 / protein;         // 목표 g을 채우는 식품 중량
+      row.costToTarget = row.gramsForTarget * price / weight;
+      if (isFinite(kcal) && kcal > 0) row.kcalForTarget = row.gramsForTarget * kcal / 100;
+    }
+  }
+  if (isFinite(kcal) && kcal > 0 && isFinite(protein)) row.proteinShare = protein * 4 / kcal;
+  return row;
+}
+
+/** 1g 단백질당 원가 오름차순. 값이 없는 행은 뒤로 보낸다. */
+function rankRows(items, targetG, sortKey, dir) {
+  var rows = items.map(function (it) { return calcRow(it, targetG); });
+  var key = sortKey || "costPerGProtein";
+  var ascending = dir !== "desc";
+  rows.sort(function (a, b) {
+    if (key === "name") return ascending ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+    var av = a[key], bv = b[key];
+    var aNull = (av === null || av === undefined || !isFinite(av));
+    var bNull = (bv === null || bv === undefined || !isFinite(bv));
+    if (aNull && bNull) return a.name.localeCompare(b.name);
+    if (aNull) return 1;            // null 은 항상 마지막
+    if (bNull) return -1;
+    return ascending ? av - bv : bv - av;
+  });
+  return rows;
+}
+
+/** 요약: 가장 싼 재료, 가장 비싼 재료, 중앙값. */
+function summary(items, targetG) {
+  var rows = rankRows(items, targetG).filter(function (r) { return r.costPerGProtein !== null; });
+  var out = {count: rows.length, cheapest: null, priciest: null, median: null, targetCost: null};
+  if (!rows.length) return out;
+  out.cheapest = rows[0];
+  out.priciest = rows[rows.length - 1];
+  var mid = Math.floor(rows.length / 2);
+  out.median = rows.length % 2 ? rows[mid] : {costPerGProtein: (rows[mid - 1].costPerGProtein + rows[mid].costPerGProtein) / 2};
+  var goal = toNum(targetG);
+  if (isFinite(goal) && goal > 0) out.targetCost = out.cheapest.costPerGProtein * goal;
+  return out;
+}
+
+function formatWon(n) {
+  if (n === null || n === undefined || !isFinite(n)) return "—";
+  // toLocaleString 은 실행 환경(로케일 데이터)에 따라 결과가 달라져서 직접 천단위를 찍는다
+  return formatNum(Math.round(n), 0) + "원";
+}
+function formatNum(n, digits) {
+  if (n === null || n === undefined || !isFinite(n)) return "—";
+  var d = (digits === undefined) ? 0 : digits;
+  return Number(n).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+function formatPct(n) {
+  if (n === null || n === undefined || !isFinite(n)) return "—";
+  return Math.round(n * 100) + "%";
+}
+
+/** 표 복사용 TSV. */
+function toTSV(rows) {
+  var head = ["식품", "가격(원)", "중량(g)", "100g당(원)", "1g단백질당(원)", "단백질열량비"];
+  var lines = [head.join("\t")];
+  rows.forEach(function (r) {
+    lines.push([r.name, Math.round(r.price), Math.round(r.weight),
+      Math.round(r.costPer100g), r.costPerGProtein === null ? "" : Math.round(r.costPerGProtein),
+      r.proteinShare === null ? "" : Math.round(r.proteinShare * 100) + "%"].join("\t"));
+  });
+  return lines.join("\n");
+}
+/* PURE_LOGIC_END */
+
+/* ================================ UI ===================================== */
+var STORE_KEY = "protein-price-calc-v1";
+var state = {items: [], target: 140, sortKey: "costPerGProtein", dir: "asc"};
+
+function $(sel) { return document.querySelector(sel); }
+function toast(msg) {
+  var t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._h);
+  t._h = setTimeout(function () { t.classList.remove("show"); }, 1800);
+}
+function save() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({items: state.items, target: state.target}));
+  } catch (e) { /* 사생활 보호 모드 등에서 저장 실패 — 무시 */ }
+}
+function load() {
+  try {
+    var raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return;
+    var data = JSON.parse(raw);
+    if (Array.isArray(data.items)) state.items = data.items;
+    if (isFinite(data.target) && data.target > 0) state.target = data.target;
+  } catch (e) { /* 손상된 저장값 무시 */ }
+}
+
+function renderStats(rows) {
+  var s = summary(state.items, state.target);
+  var box = $("#stats");
+  if (!s.count) { box.innerHTML = '<div class="stat"><div class="k">계산된 식품</div><div class="v">0<small>개</small></div></div>'; return; }
+  var spread = s.priciest.costPerGProtein / s.cheapest.costPerGProtein;
+  box.innerHTML =
+    '<div class="stat"><div class="k">가장 싼 단백질</div><div class="v">' + escapeHtml(s.cheapest.name) +
+      '<br><small>1g당 ' + formatNum(s.cheapest.costPerGProtein, 1) + '원</small></div></div>' +
+    '<div class="stat"><div class="k">가장 비싼 단백질</div><div class="v">' + escapeHtml(s.priciest.name) +
+      '<br><small>1g당 ' + formatNum(s.priciest.costPerGProtein, 1) + '원</small></div></div>' +
+    '<div class="stat"><div class="k">최고/최저 차이</div><div class="v">' + (isFinite(spread) ? formatNum(spread, 1) : "—") + '<small>배</small></div></div>' +
+    '<div class="stat"><div class="k">목표 ' + formatNum(state.target) + 'g을 가장 싸게</div><div class="v">' +
+      formatWon(s.targetCost) + '<small> / 하루</small></div></div>';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];
+  });
+}
+
+function render() {
+  var rows = rankRows(state.items, state.target, state.sortKey, state.dir);
+  var tbody = $("#tbody");
+  tbody.innerHTML = "";
+  $("#empty").style.display = rows.length ? "none" : "block";
+  var best = rows.filter(function (r) { return r.costPerGProtein !== null; })[0];
+
+  rows.forEach(function (r, idx) {
+    var tr = document.createElement("tr");
+    if (best && r.costPerGProtein !== null && r.costPerGProtein === best.costPerGProtein) tr.className = "best-row";
+    tr.innerHTML =
+      "<td>" + escapeHtml(r.name) + "</td>" +
+      "<td>" + formatNum(r.price) + "</td>" +
+      "<td>" + formatNum(r.weight) + "</td>" +
+      "<td>" + (r.costPer100g === null ? "—" : formatNum(r.costPer100g)) + "</td>" +
+      '<td class="' + (best && r.costPerGProtein === best.costPerGProtein ? "best" : "") + '">' +
+        (r.costPerGProtein === null ? "—" : formatNum(r.costPerGProtein, 1) + "원") + "</td>" +
+      "<td>" + formatPct(r.proteinShare) + "</td>" +
+      "<td>" + formatWon(r.costToTarget) + "</td>" +
+      '<td><button class="tiny ghost" data-del="' + idx + '" aria-label="삭제">✕</button></td>';
+    tbody.appendChild(tr);
+  });
+
+  Array.prototype.forEach.call(tbody.querySelectorAll("[data-del]"), function (btn) {
+    btn.addEventListener("click", function () {
+      // 화면 순서(idx)가 아니라 원본 배열에서 같은 항목을 찾아 지운다
+      var shown = rows[Number(btn.getAttribute("data-del"))];
+      var i = state.items.findIndex(function (it) {
+        return it.name === shown.name && Number(it.price) === Number(shown.price) && Number(it.weight) === Number(shown.weight);
+      });
+      if (i >= 0) { state.items.splice(i, 1); save(); render(); }
+    });
+  });
+
+  renderStats(rows);
+}
+
+// 이벤트 연결
+$("#add-form").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var item = {
+    name: $("#f-name").value.trim(),
+    price: toNum($("#f-price").value),
+    weight: toNum($("#f-weight").value),
+    protein: toNum($("#f-protein").value),
+    kcal: toNum($("#f-kcal").value)
+  };
+  if (!item.name) return toast("이름을 입력하세요");
+  if (!isFinite(item.price) || item.price < 0) return toast("가격을 확인하세요");
+  if (!isFinite(item.weight) || item.weight <= 0) return toast("중량을 확인하세요");
+  if (!isFinite(item.protein) || item.protein < 0) return toast("단백질 함량을 확인하세요");
+  state.items.push(item);
+  save(); render();
+  this.reset();
+  $("#f-name").focus();
+  toast(item.name + " 추가됨");
+});
+
+$("#f-target").addEventListener("input", function () {
+  var v = toNum(this.value);
+  state.target = (isFinite(v) && v > 0) ? v : 140;
+  save(); render();
+});
+
+$("#load-preset").addEventListener("click", function () {
+  var existing = {};
+  state.items.forEach(function (it) { existing[it.name] = true; });
+  var added = 0;
+  PRESETS.forEach(function (p) {
+    if (!existing[p.name]) { state.items.push(Object.assign({}, p)); added++; }
+  });
+  save(); render();
+  toast(added ? added + "개 예시를 불러왔습니다" : "이미 모두 들어 있습니다");
+});
+
+$("#clear-all").addEventListener("click", function () {
+  if (!state.items.length) return;
+  if (!confirm("입력한 식품을 모두 지울까요?")) return;
+  state.items = []; save(); render(); toast("지웠습니다");
+});
+
+$("#copy-csv").addEventListener("click", function () {
+  var rows = rankRows(state.items, state.target, state.sortKey, state.dir);
+  if (!rows.length) return toast("복사할 내용이 없습니다");
+  var text = toTSV(rows);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () { toast("표를 복사했습니다 (엑셀에 붙여넣기)"); },
+      function () { fallbackCopy(text); });
+  } else { fallbackCopy(text); }
+});
+function fallbackCopy(text) {
+  var ta = document.createElement("textarea");
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); toast("표를 복사했습니다"); }
+  catch (e) { toast("복사가 안 되면 표를 직접 선택해 주세요"); }
+  document.body.removeChild(ta);
+}
+
+Array.prototype.forEach.call(document.querySelectorAll("th[data-sort]"), function (th) {
+  th.addEventListener("click", function () {
+    var key = th.getAttribute("data-sort");
+    if (state.sortKey === key) state.dir = state.dir === "asc" ? "desc" : "asc";
+    else { state.sortKey = key; state.dir = (key === "costPerGProtein" || key === "costPer100g") ? "asc" : "desc"; }
+    render();
+  });
+});
+
+load();
+if (!state.items.length) state.items = PRESETS.slice(0, 0); // 첫 방문은 빈 화면 + 예시 버튼 안내
+$("#f-target").value = state.target;
+render();
+</script>
+</body>
+</html>
