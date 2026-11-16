@@ -1,5 +1,7 @@
 # 단백질 단가 계산기 (마이크로 웹툴)
 
+> **공개 주소 (GitHub Pages):** https://gkdlwjavm9-cpu.github.io/protein-cost-calculator/
+
 `index.html` **한 파일**로 끝나는 1페이지 도구입니다. 외부 라이브러리·CDN·유료 API를 쓰지 않아 인터넷 없이도 그대로 동작합니다.
 
 ## 무엇을 하나
